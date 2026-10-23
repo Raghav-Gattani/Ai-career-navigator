@@ -5,4 +5,5 @@ export const NAV_ITEMS = [
   { id: 'learning-studio', label: 'Learning Studio', icon: 'school', pageTitle: 'Learning Studio' },
   { id: 'ai-mock-interview', label: 'AI Mock Interview', icon: 'record_voice_over', pageTitle: 'AI Mock Interview' },
   { id: 'progress-reports', label: 'Progress Reports', icon: 'query_stats', pageTitle: 'Progress Reports' },
+  { id: 'resume-builder', label: 'AI Resume Builder', icon: 'description', pageTitle: 'AI Resume Builder' },
 ]

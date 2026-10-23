@@ -1,4 +1,6 @@
 import React from 'react'
+import StudyGoalTracker from '../components/study/StudyGoalTracker'
+import StudyScheduleCard from '../components/study/StudyScheduleCard'
 
 export default function Dashboard({ onNavigate, careerData, currentUser, onAnalyze }) {
   const profile = careerData?.profile
@@ -434,6 +436,46 @@ export default function Dashboard({ onNavigate, careerData, currentUser, onAnaly
               className="w-full py-2.5 px-space-md rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.99] cursor-pointer"
             >
               <span>{hasProfile ? 'Launch Practice Lab' : 'Configure Profile'}</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </button>
+          </div>
+
+          {/* StudyMate Daily Streak & Goals */}
+          <StudyGoalTracker />
+
+          {/* StudyMate Actionable Sprint Tasks */}
+          <StudyScheduleCard
+            phases={roadmap}
+            onLaunchLab={(taskTitle) => {
+              onNavigate?.('learning-studio', { topic: taskTitle, taskTitle })
+            }}
+          />
+
+          {/* AI Resume Builder Quick Launcher */}
+          <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-surface-variant/40 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">description</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-on-surface">AI Resume Builder</h3>
+                  <p className="text-[11px] text-outline">ATS-Verified Vector PDF</p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-bold text-[10px]">
+                NEW
+              </span>
+            </div>
+            <p className="text-xs text-on-surface-variant mb-3">
+              Generate a truthful ATS resume tailored to {targetRole || 'your target career'} using your completed skills and roadmap.
+            </p>
+            <button
+              type="button"
+              onClick={() => onNavigate?.('resume-builder')}
+              className="w-full py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>Build ATS Resume</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           </div>

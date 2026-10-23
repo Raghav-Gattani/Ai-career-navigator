@@ -19,9 +19,17 @@ from database import (
     get_saved_simulations,
     delete_saved_simulation,
     record_learning_activity,
-    get_learning_history
+    get_learning_history,
+    save_resume,
+    get_user_resumes,
+    get_user_resume,
+    delete_user_resume,
+    toggle_resume_public,
+    get_public_resume,
+    get_user_study_stats
 )
 import gemini_service
+from pdf_service import generate_resume_pdf
 
 app = FastAPI(title="AI Career Navigator API", version="2.0.0")
 
@@ -150,6 +158,29 @@ class CompleteRoadmapTaskRequest(BaseModel):
     task_title: str
     phase_number: Optional[int] = None
     topic: Optional[str] = None
+
+class ResumeGenerateRequest(BaseModel):
+    target_role: Optional[str] = None
+
+class ResumeSaveRequest(BaseModel):
+    id: Optional[int] = None
+    title: str = "My Professional Resume"
+    target_role: str = "Frontend Developer"
+    template: str = "modern"
+    resume_data: dict
+
+class ResumeRegenerateSectionRequest(BaseModel):
+    section_name: str
+    target_role: str
+    current_resume_data: dict
+    instructions: Optional[str] = ""
+
+class ResumeShareToggleRequest(BaseModel):
+    is_public: bool
+
+class ResumeExportPdfRequest(BaseModel):
+    template: Optional[str] = "modern"
+    resume_data: dict
 
 # ==================== Auth Endpoints ====================
 
@@ -832,6 +863,174 @@ def complete_roadmap_task_from_simulation(req: CompleteRoadmapTaskRequest, curre
         )
         return {"success": True, "task_title": req.task_title, "updated": True}
     return {"success": False, "message": "No matching roadmap task found", "updated": False}
+
+# ==================== StudyMate-Adapted Study Analytics ====================
+
+@app.get("/api/study/stats")
+def get_study_stats(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    stats = get_user_study_stats(user_id)
+    return {"success": True, "stats": stats}
+
+# ==================== AI Resume Builder Endpoints ====================
+
+@app.post("/api/resume/generate")
+def generate_resume(req: ResumeGenerateRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Retrieve profile
+    cursor.execute("""
+    SELECT target_role, target_company, domain, experience_level, github_repo, education, interests, skills_json
+    FROM career_profiles
+    WHERE user_id = ?
+    ORDER BY id DESC LIMIT 1;
+    """, (user_id,))
+    p_row = cursor.fetchone()
+
+    profile_data = {
+        "candidate_name": current_user.get("name") or "Professional Candidate",
+        "email": current_user.get("email") or "candidate@example.com",
+        "target_role": req.target_role or (p_row["target_role"] if p_row and p_row["target_role"] else "Software Engineer"),
+        "target_company": p_row["target_company"] if p_row and p_row["target_company"] else "",
+        "domain": p_row["domain"] if p_row and p_row["domain"] else "",
+        "experience_level": p_row["experience_level"] if p_row and p_row["experience_level"] else "Junior",
+        "github_repo": p_row["github_repo"] if p_row and p_row["github_repo"] else "",
+        "education": p_row["education"] if p_row and p_row["education"] else "B.S. Computer Science / Technical Program",
+        "interests": p_row["interests"] if p_row and p_row["interests"] else "",
+        "skills": []
+    }
+
+    if p_row and p_row["skills_json"]:
+        try:
+            profile_data["skills"] = json.loads(p_row["skills_json"])
+        except Exception:
+            profile_data["skills"] = []
+
+    # Retrieve completed roadmap tasks
+    cursor.execute("SELECT tasks FROM roadmap_phases WHERE user_id = ? ORDER BY phase_number ASC;", (user_id,))
+    phases = cursor.fetchall()
+    completed_tasks = []
+    for p in phases:
+        try:
+            tasks = json.loads(p["tasks"] or "[]")
+            for t in tasks:
+                if t.get("done"):
+                    completed_tasks.append(t)
+        except Exception:
+            pass
+
+    # Retrieve learning activities
+    learning_history = get_learning_history(user_id, limit=30)
+    conn.close()
+
+    target_role = req.target_role or profile_data["target_role"]
+    resume_data = gemini_service.generate_ai_resume(
+        profile_data=profile_data,
+        target_role=target_role,
+        completed_tasks=completed_tasks,
+        learning_history=learning_history
+    )
+
+    return {"success": True, "target_role": target_role, "resume_data": resume_data}
+
+@app.post("/api/resume/regenerate-section")
+def regenerate_section(req: ResumeRegenerateSectionRequest, current_user: dict = Depends(get_current_user)):
+    valid_sections = ["summary", "technical_skills", "skills", "experience", "projects", "education", "certifications"]
+    sec = req.section_name.strip().lower()
+    if sec == "skills":
+        sec = "technical_skills"
+
+    if sec not in valid_sections:
+        raise HTTPException(status_code=400, detail=f"Invalid section: {req.section_name}")
+
+    res = gemini_service.regenerate_resume_section(
+        section_name=sec,
+        current_resume_data=req.current_resume_data,
+        target_role=req.target_role,
+        instructions=req.instructions or ""
+    )
+
+    return {
+        "success": True,
+        "section_name": sec,
+        "section_data": res.get(sec),
+        "source": res.get("source", "deterministic_engine")
+    }
+
+@app.post("/api/resumes")
+def save_user_resume(req: ResumeSaveRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    resume = save_resume(
+        user_id=user_id,
+        title=req.title,
+        target_role=req.target_role,
+        template=req.template,
+        resume_data=req.resume_data,
+        resume_id=req.id
+    )
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found or unauthorized to update")
+    return {"success": True, "resume": resume}
+
+@app.get("/api/resumes")
+def list_user_resumes(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    resumes = get_user_resumes(user_id)
+    return {"success": True, "resumes": resumes}
+
+@app.get("/api/resumes/{resume_id}")
+def get_single_user_resume(resume_id: int, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    resume = get_user_resume(user_id=user_id, resume_id=resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    return {"success": True, "resume": resume}
+
+@app.delete("/api/resumes/{resume_id}")
+def delete_single_user_resume(resume_id: int, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    deleted = delete_user_resume(user_id=user_id, resume_id=resume_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Resume not found or unauthorized")
+    return {"success": True, "message": "Resume deleted successfully"}
+
+@app.post("/api/resumes/{resume_id}/share")
+def set_resume_share_status(resume_id: int, req: ResumeShareToggleRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    result = toggle_resume_public(user_id=user_id, resume_id=resume_id, is_public=req.is_public)
+    if not result:
+        raise HTTPException(status_code=404, detail="Resume not found or unauthorized")
+    return {"success": True, "share": result}
+
+@app.get("/api/public/resume/{share_token}")
+def view_public_resume(share_token: str):
+    resume = get_public_resume(share_token)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Public resume not found or access has been revoked")
+    return {"success": True, "resume": resume}
+
+@app.post("/api/resume/export-pdf")
+def export_resume_pdf(req: ResumeExportPdfRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        pdf_bytes = generate_resume_pdf(resume_data=req.resume_data, template=req.template or "modern")
+        candidate_name = req.resume_data.get("personal_info", {}).get("name") or "Resume"
+        clean_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', candidate_name.strip())
+        filename = f"{clean_name}_Resume.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Type": "application/pdf"
+            }
+        )
+    except Exception as e:
+        logger = gemini_service.logger
+        logger.error(f"PDF export error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn

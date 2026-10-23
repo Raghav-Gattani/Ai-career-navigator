@@ -295,7 +295,119 @@ def run_tests():
     assert not any(s["id"] == saved_sim_id for s in r_after.json()["saved_simulations"])
     print("✓ Test 11: Saved simulation deleted cleanly from library.")
 
-    # 24. Test Logout
+    # 24. Test StudyMate Study Analytics
+    r_study = session1.get(f"{BASE_URL}/study/stats")
+    assert r_study.status_code == 200, f"Study stats failed: {r_study.text}"
+    stats_data = r_study.json()["stats"]
+    assert "current_streak" in stats_data
+    assert "activities_today" in stats_data
+    assert "daily_goal" in stats_data
+    assert stats_data["activities_today"] >= 1
+    print(f"✓ Test 12: StudyMate study analytics verified: Streak={stats_data['current_streak']}, Today={stats_data['activities_today']}")
+
+    # 25. Test Truthful AI Resume Generation
+    r_res = session1.post(f"{BASE_URL}/resume/generate", json={
+        "target_role": "Frontend Developer"
+    })
+    assert r_res.status_code == 200, f"Resume generate failed: {r_res.text}"
+    resume_gen = r_res.json()
+    assert resume_gen["success"] is True
+    res_data = resume_gen["resume_data"]
+    assert "personal_info" in res_data
+    assert "summary" in res_data
+    assert "technical_skills" in res_data
+    assert "projects" in res_data
+    assert res_data["personal_info"]["name"] == "Sarah Miller"
+    print("✓ Test 13: AI Resume generation passed with candidate name and truthful skills.")
+
+    # 26. Test Granular Section Regeneration
+    r_regen = session1.post(f"{BASE_URL}/resume/regenerate-section", json={
+        "section_name": "summary",
+        "target_role": "Frontend Developer",
+        "current_resume_data": res_data,
+        "instructions": "Emphasize responsive design and modern JavaScript execution"
+    })
+    assert r_regen.status_code == 200, f"Section regen failed: {r_regen.text}"
+    regen_data = r_regen.json()
+    assert regen_data["success"] is True
+    assert regen_data["section_name"] == "summary"
+    assert len(regen_data["section_data"]) > 10
+    print("✓ Test 14: Granular section regeneration passed without overwriting other sections.")
+
+    # 27. Test Save Resume Draft to SQLite
+    r_save_res = session1.post(f"{BASE_URL}/resumes", json={
+        "title": "Sarah Miller - Senior Frontend Track",
+        "target_role": "Frontend Developer",
+        "template": "modern",
+        "resume_data": res_data
+    })
+    assert r_save_res.status_code == 200, f"Save resume failed: {r_save_res.text}"
+    saved_resume = r_save_res.json()["resume"]
+    resume_id = saved_resume["id"]
+    share_token = saved_resume["share_token"]
+    assert resume_id is not None
+    assert saved_resume["is_public"] is False
+    print(f"✓ Test 15: Resume draft successfully saved with ID={resume_id}.")
+
+    # 28. Test List User Resumes
+    r_list_res = session1.get(f"{BASE_URL}/resumes")
+    assert r_list_res.status_code == 200
+    resumes_list = r_list_res.json()["resumes"]
+    assert any(r["id"] == resume_id for r in resumes_list)
+    print("✓ Test 16: List resumes retrieved user draft.")
+
+    # 29. Test User Authorization Isolation on Resumes
+    # User 2 attempts to fetch User 1's private resume -> 404
+    r_unauth_get = session2.get(f"{BASE_URL}/resumes/{resume_id}")
+    assert r_unauth_get.status_code == 404, "User 2 must NOT be able to view User 1's private resume draft!"
+    # User 2 attempts to delete User 1's resume -> 404
+    r_unauth_del = session2.delete(f"{BASE_URL}/resumes/{resume_id}")
+    assert r_unauth_del.status_code == 404, "User 2 must NOT be able to delete User 1's resume!"
+    print("✓ Test 17: User isolation strictly verified. User 2 denied access to User 1's resume.")
+
+    # 30. Test Public Share Link Generation and Revocation
+    # Initially private, public endpoint should return 404
+    r_pub_before = requests.get(f"{BASE_URL}/public/resume/{share_token}")
+    assert r_pub_before.status_code == 404, "Private resume must not be publicly accessible!"
+
+    # Enable public share
+    r_share_on = session1.post(f"{BASE_URL}/resumes/{resume_id}/share", json={"is_public": True})
+    assert r_share_on.status_code == 200
+    assert r_share_on.json()["share"]["is_public"] is True
+
+    # Now public link works without session
+    r_pub_after = requests.get(f"{BASE_URL}/public/resume/{share_token}")
+    assert r_pub_after.status_code == 200, f"Public resume should be readable without auth: {r_pub_after.text}"
+    pub_data = r_pub_after.json()["resume"]
+    assert pub_data["title"] == "Sarah Miller - Senior Frontend Track"
+    assert "resume_data" in pub_data
+
+    # Revoke public link
+    r_share_off = session1.post(f"{BASE_URL}/resumes/{resume_id}/share", json={"is_public": False})
+    assert r_share_off.status_code == 200
+    r_pub_revoked = requests.get(f"{BASE_URL}/public/resume/{share_token}")
+    assert r_pub_revoked.status_code == 404, "Revoked resume must return 404!"
+    print("✓ Test 18: Public share link generation, unauthenticated viewing, and revocation passed.")
+
+    # 31. Test Selectable Text ATS PDF Export
+    r_pdf = session1.post(f"{BASE_URL}/resume/export-pdf", json={
+        "template": "modern",
+        "resume_data": res_data
+    })
+    assert r_pdf.status_code == 200, f"PDF export failed: {r_pdf.text}"
+    assert r_pdf.headers["content-type"] == "application/pdf"
+    assert r_pdf.content.startswith(b"%PDF"), "Response must be valid binary PDF starting with %PDF!"
+    assert len(r_pdf.content) > 1000
+    print(f"✓ Test 19: ATS Selectable PDF generated successfully ({len(r_pdf.content)} bytes).")
+
+    # 32. Test Delete Resume
+    r_del_res = session1.delete(f"{BASE_URL}/resumes/{resume_id}")
+    assert r_del_res.status_code == 200
+    r_get_deleted = session1.get(f"{BASE_URL}/resumes/{resume_id}")
+    assert r_get_deleted.status_code == 404
+    print("✓ Test 20: User draft deleted cleanly.")
+
+    # 33. Test Logout
     r = session1.post(f"{BASE_URL}/auth/logout")
     assert r.status_code == 200
     r = session1.get(f"{BASE_URL}/profile")

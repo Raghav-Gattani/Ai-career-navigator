@@ -6,6 +6,8 @@ import SkillGapRoadmap from './pages/SkillGapRoadmap'
 import LearningStudio from './pages/LearningStudio'
 import MockInterview from './pages/MockInterview'
 import ProgressReports from './pages/ProgressReports'
+import ResumeBuilder from './pages/ResumeBuilder'
+import PublicResumeView from './pages/PublicResumeView'
 import Auth from './pages/Auth'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import {
@@ -26,6 +28,9 @@ export default function App() {
   const [backendStatus, setBackendStatus] = useState('checking')
   const [notification, setNotification] = useState(null)
   const [learningStudioInitialParams, setLearningStudioInitialParams] = useState(null)
+  const [publicShareToken, setPublicShareToken] = useState(() => {
+    return new URLSearchParams(window.location.search).get('share')
+  })
 
   const handleNavigate = (tab, params = null) => {
     if (tab === 'learning-studio' && params) {
@@ -122,6 +127,19 @@ export default function App() {
     }
   }
 
+  // Public resume view accessed via share link ?share=<token>
+  if (publicShareToken) {
+    return (
+      <PublicResumeView
+        shareToken={publicShareToken}
+        onBackToApp={() => {
+          setPublicShareToken(null)
+          window.history.replaceState({}, '', window.location.pathname)
+        }}
+      />
+    )
+  }
+
   // Loading state while checking session
   if (isAuthChecking) {
     return (
@@ -207,6 +225,11 @@ export default function App() {
           careerData={careerData}
           currentUser={currentUser}
         />
+      )}
+      {activeTab === 'resume-builder' && (
+        <ErrorBoundary title="Resume Builder Encountered An Issue" onReset={() => handleNavigate('resume-builder')}>
+          <ResumeBuilder />
+        </ErrorBoundary>
       )}
     </Layout>
   )

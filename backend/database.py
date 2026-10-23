@@ -178,6 +178,23 @@ def init_db():
     );
     """)
 
+    # AI Resumes Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS resumes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL DEFAULT 'My Professional Resume',
+        target_role TEXT NOT NULL DEFAULT 'Frontend Developer',
+        template TEXT NOT NULL DEFAULT 'modern',
+        resume_data_json TEXT NOT NULL DEFAULT '{}',
+        share_token TEXT UNIQUE,
+        is_public INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
+
     conn.commit()
 
     # Perform Safe Migrations to ensure all columns exist
@@ -434,6 +451,194 @@ def get_learning_history(user_id: int, limit: int = 20) -> list:
             "created_at": r["created_at"]
         })
     return result
+
+# ==================== AI Resume Builder Persistence ====================
+
+def save_resume(user_id: int, title: str, target_role: str, template: str, resume_data: dict, resume_id: int = None) -> dict:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.utcnow().isoformat()
+
+    if resume_id:
+        cursor.execute("""
+        UPDATE resumes SET
+            title = ?,
+            target_role = ?,
+            template = ?,
+            resume_data_json = ?,
+            updated_at = ?
+        WHERE id = ? AND user_id = ?;
+        """, (title, target_role, template, json.dumps(resume_data), now_str, resume_id, user_id))
+        if cursor.rowcount == 0:
+            conn.close()
+            return None
+        saved_id = resume_id
+    else:
+        share_token = secrets.token_urlsafe(16)
+        cursor.execute("""
+        INSERT INTO resumes (
+            user_id, title, target_role, template, resume_data_json, share_token, is_public, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?);
+        """, (user_id, title, target_role, template, json.dumps(resume_data), share_token, now_str, now_str))
+        saved_id = cursor.lastrowid
+
+    conn.commit()
+    cursor.execute("SELECT * FROM resumes WHERE id = ?;", (saved_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "title": row["title"],
+        "target_role": row["target_role"],
+        "template": row["template"],
+        "resume_data": json.loads(row["resume_data_json"] or "{}"),
+        "share_token": row["share_token"],
+        "is_public": bool(row["is_public"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"]
+    }
+
+def get_user_resumes(user_id: int) -> list:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT id, user_id, title, target_role, template, share_token, is_public, created_at, updated_at
+    FROM resumes
+    WHERE user_id = ?
+    ORDER BY updated_at DESC;
+    """, (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [{
+        "id": r["id"],
+        "user_id": r["user_id"],
+        "title": r["title"],
+        "target_role": r["target_role"],
+        "template": r["template"],
+        "share_token": r["share_token"],
+        "is_public": bool(r["is_public"]),
+        "created_at": r["created_at"],
+        "updated_at": r["updated_at"]
+    } for r in rows]
+
+def get_user_resume(user_id: int, resume_id: int) -> dict:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM resumes WHERE id = ? AND user_id = ?;", (resume_id, user_id))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "title": row["title"],
+        "target_role": row["target_role"],
+        "template": row["template"],
+        "resume_data": json.loads(row["resume_data_json"] or "{}"),
+        "share_token": row["share_token"],
+        "is_public": bool(row["is_public"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"]
+    }
+
+def delete_user_resume(user_id: int, resume_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM resumes WHERE id = ? AND user_id = ?;", (resume_id, user_id))
+    affected = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return affected
+
+def toggle_resume_public(user_id: int, resume_id: int, is_public: bool) -> dict:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM resumes WHERE id = ? AND user_id = ?;", (resume_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    share_token = row["share_token"]
+    if not share_token:
+        share_token = secrets.token_urlsafe(16)
+
+    cursor.execute("""
+    UPDATE resumes SET is_public = ?, share_token = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+    """, (1 if is_public else 0, share_token, datetime.utcnow().isoformat(), resume_id, user_id))
+    conn.commit()
+    conn.close()
+    return {"id": resume_id, "is_public": is_public, "share_token": share_token}
+
+def get_public_resume(share_token: str) -> dict:
+    if not share_token or len(share_token) < 8:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT title, target_role, template, resume_data_json, updated_at FROM resumes WHERE share_token = ? AND is_public = 1;", (share_token,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "title": row["title"],
+        "target_role": row["target_role"],
+        "template": row["template"],
+        "resume_data": json.loads(row["resume_data_json"] or "{}"),
+        "updated_at": row["updated_at"]
+    }
+
+def get_user_study_stats(user_id: int) -> dict:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT created_at, activity_type, score FROM learning_activities
+    WHERE user_id = ?
+    ORDER BY created_at DESC;
+    """, (user_id,))
+    rows = cursor.fetchall()
+
+    now = datetime.utcnow()
+    today_str = now.date().isoformat()
+
+    unique_dates = set()
+    activities_today = 0
+    total_sessions = len(rows)
+
+    for r in rows:
+        created = r["created_at"]
+        if not created:
+            continue
+        try:
+            d_str = str(created).split(" ")[0].split("T")[0]
+            unique_dates.add(d_str)
+            if d_str == today_str:
+                activities_today += 1
+        except Exception:
+            continue
+
+    streak = 0
+    check_date = now.date()
+    if check_date.isoformat() not in unique_dates:
+        check_date = check_date - timedelta(days=1)
+
+    while check_date.isoformat() in unique_dates:
+        streak += 1
+        check_date = check_date - timedelta(days=1)
+
+    conn.close()
+    return {
+        "current_streak": max(1 if activities_today > 0 else 0, streak),
+        "activities_today": activities_today,
+        "daily_goal": 3,
+        "total_sessions": total_sessions
+    }
 
 if __name__ == "__main__":
     init_db()

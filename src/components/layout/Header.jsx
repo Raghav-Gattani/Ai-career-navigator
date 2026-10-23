@@ -25,6 +25,21 @@ export default function Header({
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [isDark, setIsDark] = useState(() => {
+    return document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark'
+  })
+
+  const toggleTheme = () => {
+    const nextDark = !isDark
+    setIsDark(nextDark)
+    if (nextDark) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -224,6 +239,19 @@ export default function Header({
             </>
           )}
         </div>
+
+        {/* Theme Toggle (Light / Dark) */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+          type="button"
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            {isDark ? 'light_mode' : 'dark_mode'}
+          </span>
+        </button>
 
         {/* Settings Button */}
         <button

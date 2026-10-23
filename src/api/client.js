@@ -163,3 +163,73 @@ export async function completeRoadmapTask({ task_title, phase_number = null, top
     body: JSON.stringify({ task_title, phase_number, topic })
   })
 }
+
+// ==================== StudyMate Study Analytics ====================
+
+export async function fetchStudyStats() {
+  return await request('/study/stats')
+}
+
+// ==================== AI Resume Builder Endpoints ====================
+
+export async function generateResume({ target_role = null } = {}) {
+  return await request('/resume/generate', {
+    method: 'POST',
+    body: JSON.stringify({ target_role })
+  })
+}
+
+export async function regenerateResumeSection({ section_name, target_role, current_resume_data, instructions = '' }) {
+  return await request('/resume/regenerate-section', {
+    method: 'POST',
+    body: JSON.stringify({ section_name, target_role, current_resume_data, instructions })
+  })
+}
+
+export async function saveResume({ id = null, title, target_role, template = 'modern', resume_data }) {
+  return await request('/resumes', {
+    method: 'POST',
+    body: JSON.stringify({ id, title, target_role, template, resume_data })
+  })
+}
+
+export async function fetchResumes() {
+  return await request('/resumes')
+}
+
+export async function fetchResume(resumeId) {
+  return await request(`/resumes/${resumeId}`)
+}
+
+export async function deleteResume(resumeId) {
+  return await request(`/resumes/${resumeId}`, {
+    method: 'DELETE'
+  })
+}
+
+export async function toggleResumeShare(resumeId, isPublic) {
+  return await request(`/resumes/${resumeId}/share`, {
+    method: 'POST',
+    body: JSON.stringify({ is_public: isPublic })
+  })
+}
+
+export async function fetchPublicResume(shareToken) {
+  return await request(`/public/resume/${encodeURIComponent(shareToken)}`)
+}
+
+export async function exportResumePdfBlob({ template = 'modern', resume_data }) {
+  const url = `${API_BASE}/resume/export-pdf`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ template, resume_data })
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new Error(data?.detail || `Failed to download PDF (${res.status})`)
+  }
+  return await res.blob()
+}
+

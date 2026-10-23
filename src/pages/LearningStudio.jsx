@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import SimulationRegistry from '../components/simulations/SimulationRegistry'
 import ErrorBoundary from '../components/common/ErrorBoundary'
+import StudyFocusTimer from '../components/study/StudyFocusTimer'
 import {
   generateSimulation,
   saveSimulation,
@@ -39,6 +40,7 @@ export default function LearningStudio({ onNavigate, showNotification, careerDat
   // Linked roadmap task completion state
   const [linkedTaskCompleted, setLinkedTaskCompleted] = useState(false)
   const [isCompletingTask, setIsCompletingTask] = useState(false)
+  const [showTimer, setShowTimer] = useState(false)
 
   // Critical gaps from profile for smart suggestions
   const criticalGaps = useMemo(() => {
@@ -299,8 +301,44 @@ export default function LearningStudio({ onNavigate, showNotification, careerDat
             <span className="material-symbols-outlined text-[18px]">history</span>
             <span>Activity Log ({learningHistory.length})</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setShowTimer(!showTimer)}
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              showTimer
+                ? 'bg-[#00685f] text-white shadow-sm font-bold'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+            title="Toggle Pomodoro Focus Timer"
+          >
+            <span className="material-symbols-outlined text-[18px]">timer</span>
+            <span>Focus Block</span>
+          </button>
         </div>
       </div>
+
+      {/* Focus Timer Docked Widget */}
+      {showTimer && (
+        <div className="mb-6 p-4 bg-surface-container-lowest rounded-2xl border border-surface-variant/40 shadow-sm flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <StudyFocusTimer
+              currentTopic={activeSpec?.topic || topicInput || 'Visual Lab Sprint'}
+              compact={true}
+              onSessionComplete={() => {
+                showNotification?.('25m Focus Sprint completed! Activity recorded.')
+                fetchLearningHistory(20).then((res) => res && setLearningHistory(res.history || []))
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setShowTimer(false)}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 cursor-pointer"
+            title="Hide Timer"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Prominent Topic Input Ribbon */}
       <div className="p-space-lg rounded-2xl bg-surface-container-lowest shadow-sm border border-surface-variant/40 mb-6 flex flex-col gap-4">
