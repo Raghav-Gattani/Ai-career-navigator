@@ -235,10 +235,10 @@ The project is designed to evolve as additional learning experiences and career-
 
 ## 👨‍💻 Author
 
-**Raghav Gattani**
-**Hitesh**
-**Vaibhav Gupta**
-**Vanshraj**
+**Raghav Gattani,**
+**Hitesh,**
+**Vaibhav Gupta,**
+**Vanshraj,**
 
 Computer Science & Engineering Student
 
