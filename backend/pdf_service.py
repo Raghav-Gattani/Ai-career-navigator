@@ -227,8 +227,9 @@ def generate_resume_pdf(resume_data: dict, template: str = "modern") -> bytes:
 
         for exp in experience:
             exp_title = f"<b>{exp.get('role', '')}</b> — {exp.get('company', '')}"
+            exp_dates = exp.get("dates") or exp.get("duration") or ""
             exp_table = Table(
-                [[Paragraph(exp_title, item_title_style), Paragraph(exp.get("duration", ""), item_meta_style)]],
+                [[Paragraph(exp_title, item_title_style), Paragraph(exp_dates, item_meta_style)]],
                 colWidths=[420, 120]
             )
             exp_table.setStyle(TableStyle([

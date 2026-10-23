@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from dotenv import load_dotenv
@@ -1391,15 +1392,20 @@ def normalize_topic_to_renderer(topic_query: str) -> tuple[str, str, str]:
         if r_key in ["concept_diagram", "bst", "binary_search"]:
             continue
         for kw in config.get("keywords", []):
-            if kw in cleaned or (len(cleaned) >= 4 and cleaned in kw):
-                return r_key, config["normalized_topic"], config["concept_category"]
+            if len(kw) <= 4:
+                # Word boundary check prevents short acronyms/tokens (e.g. "ack") from false-matching substrings (e.g. "stack")
+                if re.search(r'\b' + re.escape(kw) + r'\b', cleaned):
+                    return r_key, config["normalized_topic"], config["concept_category"]
+            else:
+                if kw in cleaned or (len(cleaned) >= 4 and cleaned in kw):
+                    return r_key, config["normalized_topic"], config["concept_category"]
 
     # Domain fallbacks for specific known technical terms
-    if "tree" in cleaned or "node" in cleaned:
+    if re.search(r'\b(tree|bst)\b', cleaned):
         return "bst", "Binary Search Tree", "Data Structures & Algorithms"
-    if "tcp" in cleaned or "network" in cleaned or "packet" in cleaned or "handshake" in cleaned:
+    if "tcp" in cleaned or "packet" in cleaned or "handshake" in cleaned or re.search(r'\b(syn|ack)\b', cleaned):
         return "tcp_handshake", "TCP Three-Way Handshake", "Networking & Protocols"
-    if "sql" in cleaned or "database" in cleaned or "join" in cleaned:
+    if "sql" in cleaned or "database" in cleaned or re.search(r'\bjoin\b', cleaned):
         return "sql_join", "SQL INNER & LEFT JOIN", "Databases & Backend"
     if "neural" in cleaned or "forward prop" in cleaned or "perceptron" in cleaned:
         return "neural_network", "Neural Network Forward Propagation", "AI & Machine Learning"
@@ -1407,13 +1413,13 @@ def normalize_topic_to_renderer(topic_query: str) -> tuple[str, str, str]:
         return "stack_queue", "Stack & Queue Data Structures", "Data Structures & Algorithms"
     if "sort" in cleaned:
         return "sorting", "Sorting Algorithms (Bubble & Merge)", "Data Structures & Algorithms"
-    if "dom" in cleaned or "html" in cleaned:
+    if re.search(r'\bdom\b', cleaned) or "html" in cleaned:
         return "dom_tree", "HTML Document Object Model (DOM) Tree", "Frontend Architecture"
     if "css" in cleaned or "flex" in cleaned or "grid" in cleaned:
         return "css_layout", "CSS Flexbox & Grid Box Model", "Frontend Architecture"
-    if "dns" in cleaned:
+    if re.search(r'\bdns\b', cleaned) or "domain name" in cleaned or "nameserver" in cleaned:
         return "dns_resolution", "DNS Hierarchical Resolution", "Networking & Protocols"
-    if "graph" in cleaned or "bfs" in cleaned or "dfs" in cleaned:
+    if "graph" in cleaned or re.search(r'\b(bfs|dfs)\b', cleaned):
         return "graph_traversal", "Graph Traversal: BFS vs DFS", "Data Structures & Algorithms"
 
     # Honest generic fallback for unknown topics (Requirement: clearly labelled generic explanation, NOT an unrelated visualization)

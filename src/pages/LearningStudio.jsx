@@ -80,14 +80,6 @@ export default function LearningStudio({ onNavigate, showNotification, careerDat
     loadInitial()
   }, [targetRole])
 
-  // Only auto-generate if explicitly launched with topic from another screen
-  useEffect(() => {
-    if (navigationParams?.topic) {
-      setTopicInput(navigationParams.topic)
-      handleGenerate(navigationParams.topic)
-    }
-  }, [navigationParams])
-
   const handleGenerate = async (topicToUse) => {
     const query = (topicToUse || topicInput).trim()
     if (!query) {
@@ -125,6 +117,14 @@ export default function LearningStudio({ onNavigate, showNotification, careerDat
       setIsLoading(false)
     }
   }
+
+  // Only auto-generate if explicitly launched with topic from another screen
+  useEffect(() => {
+    if (navigationParams?.topic) {
+      setTopicInput(navigationParams.topic)
+      handleGenerate(navigationParams.topic)
+    }
+  }, [navigationParams])
 
   const handleSaveToLibrary = async () => {
     if (!activeSpec) return
