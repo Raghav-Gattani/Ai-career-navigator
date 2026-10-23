@@ -238,7 +238,7 @@ The project is designed to evolve as additional learning experiences and career-
 **Raghav Gattani,**
 **Hitesh,**
 **Vaibhav Gupta,**
-**Vanshraj,**
+**Vanshraj.**
 
 Computer Science & Engineering Student
 
