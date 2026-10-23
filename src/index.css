@@ -1,0 +1,10 @@
+/* Custom base styles for AI Career Navigator */
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color-scheme: light;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
