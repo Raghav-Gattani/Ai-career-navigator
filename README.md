@@ -1,4 +1,4 @@
-# # 🚀 AI Career Navigator
+# #  AI Career Navigator
 
 **Your AI-powered companion for career planning, skill development, and interview preparation.**
 
@@ -6,31 +6,31 @@ AI Career Navigator is a full-stack web application designed to help students an
 
 The goal is to bring essential career-development tools together in one place, from discovering what to learn next to preparing for professional opportunities.
 
-## ✨ Features
+##  Features
 
-### 🎯 Career Analyzer
+###  Career Analyzer
 - Analyze career interests, skills, and professional goals.
 - Explore potential career directions.
 - Use AI-powered guidance to support career planning.
 
-### 🗺️ Skill Gap Analysis & Learning Roadmaps
+###  Skill Gap Analysis & Learning Roadmaps
 - Identify skills relevant to your target role.
 - Organize learning into structured phases and tasks.
 - Track roadmap progress.
 - Access learning activities aligned with your career goals.
 
-### 💻 Interactive Learning Studio
+###  Interactive Learning Studio
 - Explore technical concepts through interactive learning experiences.
 - Practice programming concepts with visual simulations.
 - Learn complex topics through hands-on demonstrations.
 - Launch learning activities directly from roadmap tasks.
 
-### 🤖 AI Mock Interview
+###  AI Mock Interview
 - Practice interview questions.
 - Prepare for technical interviews.
 - Use AI-assisted feedback to support interview preparation.
 
-### 📄 AI Resume Builder
+###  AI Resume Builder
 - Generate a resume tailored to your target role.
 - Use AI to enhance individual resume sections.
 - Edit resume content manually.
@@ -39,25 +39,25 @@ The goal is to bring essential career-development tools together in one place, f
 - Export resumes as PDFs.
 - Generate optional public, read-only resume links that can be revoked.
 
-### 📈 Progress Tracking
+###  Progress Tracking
 - Monitor learning activity and technical practice sessions.
 - Track daily learning goals and streaks.
 - Use a focus timer with work and break modes.
 - View roadmap tasks and continue learning from your dashboard.
 
-### 🌗 Light & Dark Mode
+###  Light & Dark Mode
 - Switch between light and dark themes.
 - Save your theme preference across page refreshes.
 - Enjoy a consistent interface across supported application pages.
 
-### 🔐 Backend & Data Persistence
+###  Backend & Data Persistence
 - FastAPI backend for application APIs.
 - SQLite database for persistent application data.
 - User-specific data access controls.
 - Google Gemini integration for AI-powered features.
 - Fallback behavior for supported AI operations when an API key is unavailable.
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 | Layer | Technologies |
 |---|---|
@@ -70,7 +70,7 @@ The goal is to bring essential career-development tools together in one place, f
 | Testing | Pytest |
 | Version Control | Git and GitHub |
 
-## 🏗️ Application Architecture
+##  Application Architecture
 
 ```text
 AI Career Navigator
@@ -93,7 +93,7 @@ AI Career Navigator
     └── SQLite Database
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 Follow these instructions to run the project locally on your computer.
 
@@ -218,7 +218,7 @@ cd ~/ai-career-navigator/backend
 
 The test suite can be used to check backend behavior, including API endpoints, persistence, access controls, and resume-related functionality.
 
-## 🔒 Security & Privacy
+##  Security & Privacy
 
 - Store API keys in environment variables, never in frontend code.
 - Do not commit `.env` files, local databases, or private user information.
@@ -227,24 +227,24 @@ The test suite can be used to check backend behavior, including API endpoints, p
 - Revoke public resume links when they are no longer needed.
 - Review configuration and access controls before deploying the application publicly.
 
-## 🗺️ Project Goals
+##  Project Goals
 
 AI Career Navigator aims to make career preparation more structured and accessible by combining career guidance, practical technical learning, progress tracking, and professional resume preparation in a single application.
 
 The project is designed to evolve as additional learning experiences and career-development features are developed.
 
-## 👨‍💻 Author
+##  Author
 
-**Raghav Gattani,**
-**Hitesh,**
-**Vaibhav Gupta,**
-**Vanshraj.**
+**Raghav Gattani**  
+**Hitesh**  
+**Vaibhav Gupta**  
+**Vanshraj**  
 
 Computer Science & Engineering Student
 
 GitHub: [@Raghav-Gattani](https://github.com/Raghav-Gattani)
 
-## ⭐ Support
+##  Support
 
 If you find this project interesting, consider starring the repository, sharing feedback, or suggesting improvements through GitHub Issues.
 
