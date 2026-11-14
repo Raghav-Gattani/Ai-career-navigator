@@ -13,7 +13,6 @@ from database import (
     create_user,
     authenticate_user,
     create_session,
-    get_session_user,
     delete_session,
     save_simulation,
     get_saved_simulations,
@@ -29,6 +28,7 @@ from database import (
     get_user_study_stats
 )
 import gemini_service
+from deps import get_current_user
 from pdf_service import generate_resume_pdf
 
 app = FastAPI(title="AI Career Navigator API", version="2.0.0")
@@ -55,27 +55,7 @@ def startup_event():
 
 # ==================== Dependencies ====================
 
-def get_current_user(request: Request) -> dict:
-    session_token = request.cookies.get("session_id")
-    if not session_token:
-        # Also check Authorization header as fallback: Bearer <token>
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            session_token = auth_header.split(" ", 1)[1].strip()
 
-    if not session_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please sign in."
-        )
-
-    user = get_session_user(session_token)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired or invalid. Please sign in again."
-        )
-    return user
 
 # ==================== Request Models ====================
 
